@@ -1,0 +1,80 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+
+# === Entorno virtual ===
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# === Archivos de configuración local ===
+*.env
+*.local
+*.ini
+*.cfg
+*.log
+
+# === Django ===
+# Archivos de base de datos locales
+db.sqlite3
+db.sqlite3-journal
+
+# Archivos de migraciones (opcional si quieres versionarlas)
+# Si estás en desarrollo y aún cambian mucho, puedes ignorarlas.
+# **Pero en proyectos colaborativos o productivos, se recomienda versionarlas.**
+#migrations/
+
+# Archivos estáticos y media generados
+/static/
+staticfiles/
+*.collectstatic/
+
+# === IDEs ===
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === Sistema operativo ===
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# === PyInstaller ===
+*.manifest
+*.spec
+
+# === Testing ===
+.coverage
+.tox/
+.nox/
+.pytest_cache/
+htmlcov/
+.coverage.*
+
+# === MyPy / Pylint / Otros ===
+.mypy_cache/
+.pyre/
+.pytype/
+.dmypy.json
+ruff_cache/
+
+# === Docker ===
+*.pid
+*.seed
+*.pid.lock
+
+# === Node/npm (si usas React o frontend con npm) ===
+node_modules/
+package-lock.json
+yarn.lock
