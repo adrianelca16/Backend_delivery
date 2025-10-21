@@ -7,6 +7,7 @@ class Wallet(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='wallet')
     saldo = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
 
     def __str__(self):
         return f"Wallet de {self.usuario.nombre} - {self.saldo}"

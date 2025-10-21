@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'auditoria',
     'calificaciones',
     'notificaciones',
-    'ordenes',
+    'ordenes.apps.OrdenesConfig',
     'pagos',
     'restaurantes',
     'ubicaciones',

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import EstadoOrden, Orden, DetalleOrden
 from core.models import Usuario
+from restaurantes.serializers import OpcionPlatoSerializer  
 
 class EstadoOrdenSerializer(serializers.ModelSerializer):
     class Meta:
@@ -11,6 +12,17 @@ class EstadoOrdenSerializer(serializers.ModelSerializer):
 class DetalleOrdenSerializer(serializers.ModelSerializer):
     plato_nombre = serializers.ReadOnlyField(source='plato.nombre')
     plato_imagen = serializers.SerializerMethodField()
+
+     # 👇 Este campo solo se usa cuando llega el JSON desde el frontend
+    extras = serializers.ListField(
+        child=serializers.DictField(),
+        required=False,
+        write_only=True  # 🔥 solo escritura
+    )
+
+    # 👇 Este se usa para devolver los extras al frontend
+    extras_detalle = OpcionPlatoSerializer(source='extras', many=True, read_only=True)
+
 
     class Meta:
         model = DetalleOrden
@@ -23,8 +35,10 @@ class DetalleOrdenSerializer(serializers.ModelSerializer):
             'precio_unitario',
             'subtotal',
             'descuento',
+            'extras',
+            'extras_detalle',
         ]
-        read_only_fields = ['precio_unitario', 'subtotal', 'descuento']
+        read_only_fields = ['precio_unitario', 'subtotal', 'descuento', 'extras_detalle']
 
     def get_plato_imagen(self, obj):
         print("DEBUG imagen plato:", obj.plato.imagen)  # <- aquí sí
@@ -95,8 +109,20 @@ class OrdenSerializer(serializers.ModelSerializer):
         detalles_data = validated_data.pop('detalles', [])
         orden = Orden.objects.create(**validated_data)
 
-        for detalle in detalles_data:
-            DetalleOrden.objects.create(orden=orden, **detalle)
+        for detalle_data in detalles_data:
+            extras_data = detalle_data.pop('extras', [])
+            detalle = DetalleOrden.objects.create(orden=orden, **detalle_data)
+
+            # 🧩 Procesar extras
+            extras_ids = []
+            for extra_obj in extras_data:
+                extra_id = extra_obj.get('id')
+                if extra_id:
+                    extras_ids.append(extra_id)
+
+            if extras_ids:
+                detalle.extras.set(extras_ids)
+                detalle.save()  # recalcula subtotal con extras
 
         orden.calcular_total()
         return orden

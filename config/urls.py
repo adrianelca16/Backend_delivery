@@ -13,4 +13,5 @@ urlpatterns = [
     path('api/calificaciones/', include('calificaciones.urls')),
     path('api/notificaciones/', include('notificaciones.urls')),
     path('api/pagos/', include('pagos.urls')),
+    path('api/wallet/', include('wallet.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
