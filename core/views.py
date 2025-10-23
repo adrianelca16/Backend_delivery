@@ -186,6 +186,25 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         usuario.save()
 
         return Response({'mensaje': f'{metodo} verificado correctamente'})
+    
+    @action(detail=False, methods=['post'], url_path='registrar-expo-token')
+    def registrar_expo_token(self, request):
+        usuario = request.user
+        expo_token = request.data.get('expo_token')
+
+        if not expo_token:
+            return Response(
+                {"error": "El campo 'expo_token' es requerido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        usuario.expo_token = expo_token
+        usuario.save(update_fields=['expo_token'])
+
+        return Response(
+            {"message": "Expo token registrado correctamente."},
+            status=status.HTTP_200_OK
+        )
 
 
 

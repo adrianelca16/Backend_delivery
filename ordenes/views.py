@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from ubicaciones.models import UbicacionConductor
 from auditoria.services import registrar_auditoria
 from wallet.utils import asignar_pago_wallet_conductor
-from ordenes.utils import asignar_conductor_a_orden
+from ordenes.utils import asignar_conductor_a_orden, enviar_notificacion_expo
 from django.utils import timezone
 from datetime import timedelta
 from ordenes.utils import obtener_distancia_osrm, calcular_envio_usd
@@ -62,6 +62,16 @@ class OrdenViewSet(viewsets.ModelViewSet):
                     orden.save(update_fields=["costo_envio"])
         except Exception as e:
             print("Error calculando costo de envío:", e)
+        
+         # ✅ Notificar al comercio que hay una nueva orden
+        comercio_user = orden.restaurante.usuario
+        if comercio_user and comercio_user.expo_token:
+            enviar_notificacion_expo(
+                comercio_user.expo_token,
+                "📦 Nueva orden recibida",
+                f"Tienes una nueva orden del cliente {user.nombre}.",
+                {"orden_id": str(orden.id)}
+            )
 
 
     @action(detail=True, methods=['post'], url_path='aceptar')
@@ -107,9 +117,16 @@ class OrdenViewSet(viewsets.ModelViewSet):
         orden.limite_aceptacion = None
         orden.save(update_fields=["estado", "limite_aceptacion"])
 
+        cliente = orden.cliente
+        if cliente and cliente.expo_token:
+            enviar_notificacion_expo(
+                cliente.expo_token,
+                "🚗 Tu orden fue aceptada",
+                f"El conductor {conductor.usuario.nombre} está en camino a recoger tu pedido.",
+                {"orden_id": str(orden.id)}
+            )
+
         return Response({'detail': 'Orden aceptada correctamente.'}, status=200)
-
-
 
     @action(detail=True, methods=['patch'], url_path='cambiar-estado')
     def cambiar_estado(self, request, pk=None):
@@ -154,6 +171,17 @@ class OrdenViewSet(viewsets.ModelViewSet):
         orden.estado = nuevo_estado
         orden.save()
 
+        # ✅ Notificar al cliente sobre el cambio de estado
+        cliente = orden.cliente
+        if cliente and cliente.expo_token:
+            enviar_notificacion_expo(
+                cliente.expo_token,
+                f"📲 Tu orden cambió de estado",
+                f"La orden ahora está '{nuevo_estado.nombre}'.",
+                {"orden_id": str(orden.id), "estado": nuevo_estado.nombre}
+            )
+
+
         registrar_auditoria(
             usuario=request.user,
             accion="Cambio de estado",
@@ -186,15 +214,15 @@ class OrdenViewSet(viewsets.ModelViewSet):
         if not orden.conductor:
             return Response({'detail': 'No hay conductor asignado aún.'}, status=404)
 
-        ubicacion = UbicacionConductor.objects.filter(conductor=orden.conductor).first()
-        if not ubicacion:
+        conductor = orden.conductor
+        if conductor.latitud is None or conductor.longitud is None:
             return Response({'detail': 'El conductor no tiene ubicación registrada.'}, status=404)
 
         return Response({
-            'latitud': ubicacion.latitud,
-            'longitud': ubicacion.longitud,
-            'actualizado_en': ubicacion.actualizado_en
-        })
+        'latitud': conductor.latitud,
+        'longitud': conductor.longitud,
+        'actualizado_en': conductor.ultimo_pedido  # o usa otro campo si quieres timestamp
+    })
     
     @action(detail=False, methods=['get'], url_path='esperando-aceptacion')
     def esperando_aceptacion(self, request):

@@ -4,6 +4,7 @@ from restaurantes.models import Restaurante
 from decimal import Decimal
 import uuid
 
+
 class EstadoOrden(models.Model):
     nombre = models.CharField(max_length=50, unique=True)
     descripcion = models.TextField()
@@ -12,20 +13,35 @@ class EstadoOrden(models.Model):
     def __str__(self):
         return self.nombre
 
+
 class Orden(models.Model):
     numero_orden = models.PositiveIntegerField(unique=True, editable=False, null=True, blank=True)
-    cliente = models.ForeignKey(Usuario,null=True, blank=True,related_name='ordenes_cliente',on_delete=models.PROTECT,limit_choices_to={'rol__nombre': 'cliente'})
+    cliente = models.ForeignKey(
+        Usuario,
+        null=True, blank=True,
+        related_name='ordenes_cliente',
+        on_delete=models.PROTECT,
+        limit_choices_to={'rol__nombre': 'cliente'}
+    )
     restaurante = models.ForeignKey(Restaurante, on_delete=models.PROTECT)
-    conductor = models.ForeignKey(Conductor,null=True, blank=True,related_name='ordenes_cliente',on_delete=models.PROTECT)
-    estado = models.ForeignKey(EstadoOrden, on_delete=models.PROTECT)
+    conductor = models.ForeignKey(
+        Conductor,
+        null=True, blank=True,
+        related_name='ordenes_cliente',
+        on_delete=models.PROTECT
+    )
+    estado = models.ForeignKey("EstadoOrden", on_delete=models.PROTECT)
     metodo_pago = models.ForeignKey("pagos.MetodoPago", on_delete=models.PROTECT)
+
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     descuento = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     impuesto = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     direccion_entrega = models.TextField(null=True, blank=True)
     latitud = models.DecimalField(max_digits=20, decimal_places=18, null=True, blank=True)
     longitud = models.DecimalField(max_digits=20, decimal_places=18, null=True, blank=True)
@@ -45,31 +61,33 @@ class Orden(models.Model):
     def calcular_total(self):
         """
         Calcula subtotal, impuesto y total considerando:
-        - Detalles de orden (incluyendo extras)
-        - Descuento
+        - Detalles de la orden (ya incluyen descuentos y extras)
         - Costo de envío
+        - IVA sobre el subtotal (no sobre el descuento)
         """
         subtotal = Decimal("0.00")
         descuento_total = Decimal("0.00")
 
+        # Los detalles ya tienen el precio real (con descuento aplicado)
         for detalle in self.detalles.all():
-            detalle.calcular_subtotal()  # ← recalcula subtotal (base + extras)
+            detalle.calcular_subtotal()
             subtotal += detalle.subtotal
-            descuento_total += detalle.descuento
+            descuento_total += detalle.descuento  # solo informativo
 
-        base_imponible = subtotal - descuento_total
-        impuesto = base_imponible * Decimal("0.16")  # IVA 16%
+        # Calcular impuesto sobre el subtotal
+        impuesto = subtotal * Decimal("0.16")
         costo_envio = self.costo_envio or Decimal("0.00")
-        total = base_imponible + impuesto + costo_envio
+
+        # Total final (subtotal + impuesto + envío)
+        total = subtotal + impuesto + costo_envio
 
         self.subtotal = subtotal
-        self.descuento = descuento_total
+        self.descuento = descuento_total  # se muestra, pero no se resta
         self.impuesto = impuesto
         self.total = total
         self.save(update_fields=["subtotal", "descuento", "impuesto", "total"])
 
         return self.total
-
 
 
 class DetalleOrden(models.Model):
@@ -85,12 +103,10 @@ class DetalleOrden(models.Model):
     def calcular_subtotal(self, guardar=True):
         """
         Calcula el subtotal del detalle considerando:
-        - Precio del plato
+        - Precio del plato (ya con descuento si aplica)
         - Precio de los extras
         - Cantidad
         """
-        from decimal import Decimal
-
         total_extras = Decimal("0.00")
         for extra in self.extras.all():
             total_extras += extra.precio_adicional
@@ -103,6 +119,7 @@ class DetalleOrden(models.Model):
             self.precio_unitario = self.plato.precio
             self.descuento = Decimal("0.00")
 
+        # Subtotal con precio final (ya descontado) + extras
         self.subtotal = (self.precio_unitario + total_extras) * self.cantidad
 
         if guardar:
@@ -111,15 +128,8 @@ class DetalleOrden(models.Model):
         return self.subtotal
 
     def save(self, *args, **kwargs):
-        # Si el plato tiene un precio de descuento válido, se aplica
-        if self.plato.precio_descuento and self.plato.precio_descuento < self.plato.precio:
-            self.precio_unitario = self.plato.precio_descuento
-            self.descuento = (self.plato.precio - self.plato.precio_descuento) * self.cantidad
-        else:
-            self.precio_unitario = self.plato.precio
-            self.descuento = 0
-
-        self.subtotal = Decimal(self.precio_unitario) * self.cantidad
+        # Recalcula precios antes de guardar
+        self.calcular_subtotal(guardar=False)
         super().save(*args, **kwargs)
 
         # Recalcular total de la orden

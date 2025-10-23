@@ -53,19 +53,15 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     estado = models.ForeignKey(EstadoUsuario, on_delete=models.PROTECT)
     nombre = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-
     telefono = models.CharField(
         max_length=20,
         validators=[RegexValidator(r'^\+?\d{10,15}$', "El teléfono debe tener entre 10 y 15 dígitos, con opción de +")]
     )
-    
     foto_perfil = models.ImageField(upload_to=usuario_image_path, blank=True, null=True)
     cedula_imagen = models.ImageField(upload_to=usuario_image_path, blank=True, null=True)
-
+    
     fecha_registro = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
-
-    cedula_imagen = models.ImageField(upload_to=usuario_image_path, blank=True, null=True)
 
     verificacion_email = models.BooleanField(default=False, blank=True, null=True)
     verificacion_telefono = models.BooleanField(default=False, blank=True, null=True)
@@ -73,6 +69,9 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     verificacion_intentos = models.IntegerField(default=0)
     comentarios_verificacion = models.TextField(blank=True, null=True)
+
+    # ✅ NUEVO CAMPO
+    expo_token = models.CharField(max_length=255, blank=True, null=True, help_text="Token de notificación Expo")
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -102,6 +101,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
             if os.path.exists(foto_path):
                 os.remove(foto_path)
         super().delete(*args, **kwargs)
+
 
 class Direccion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
