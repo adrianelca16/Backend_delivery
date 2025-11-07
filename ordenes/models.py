@@ -75,8 +75,10 @@ class Orden(models.Model):
             descuento_total += detalle.descuento  # solo informativo
 
         # Calcular impuesto sobre el subtotal
-        impuesto = subtotal * Decimal("0.16")
+        
         costo_envio = self.costo_envio or Decimal("0.00")
+
+        impuesto = ((subtotal * Decimal("0.13")) + costo_envio) * Decimal("0.16")
 
         # Total final (subtotal + impuesto + envío)
         total = subtotal + impuesto + costo_envio

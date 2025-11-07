@@ -38,7 +38,7 @@ def asignar_conductor_a_orden(orden):
             float(restaurante.latitud), float(restaurante.longitud),
             float(conductor.latitud), float(conductor.longitud)
         )
-        if distancia <= 5:
+        if distancia <= 10:
             candidatos.append((conductor, distancia))
 
     if not candidatos:
@@ -72,18 +72,6 @@ def asignar_conductor_a_orden(orden):
     # send_push_notification(mejor_conductor.usuario, f"Tienes una nueva orden #{orden.numero_orden}")
 
     return mejor_conductor
-
-def enviar_notificacion_expo(token, titulo, mensaje, data=None):
-    url = "https://exp.host/--/api/v2/push/send"
-    payload = {
-        "to": token,
-        "title": titulo,
-        "body": mensaje,
-        "data": data or {},
-    }
-    headers = {"Content-Type": "application/json"}
-    r = requests.post(url, json=payload, headers=headers)
-    return r.json()
 
 def calcular_envio_usd(distancia_km):
     """Calcula el costo en USD según la distancia."""

@@ -60,6 +60,8 @@ class Command(BaseCommand):
             {"nombre": "Entregada","descripcion": "Orden entregada al cliente"},
             {"nombre": "Cancelada","descripcion": "Orden cancelada por el cliente o comercio"},
             {"nombre": "Esperando aceptacion","descripcion": "Esperando aceptacion del conductor"},
+            {"nombre": "Preparado","descripcion": "Orden preparada por el comercio"},
+            {"nombre": "Confirmación de entrega", "descripcion": "Confirmacion de recibido del cliente"}
         ]
 
         for estado in estado_orden:

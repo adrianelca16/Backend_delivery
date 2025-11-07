@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from ubicaciones.models import UbicacionConductor
 from auditoria.services import registrar_auditoria
-from wallet.utils import asignar_pago_wallet_conductor
+from wallet.utils import asignar_pago_wallet
 from ordenes.utils import asignar_conductor_a_orden, enviar_notificacion_expo
 from django.utils import timezone
 from datetime import timedelta
@@ -191,7 +191,7 @@ class OrdenViewSet(viewsets.ModelViewSet):
         )
 
         if nuevo_estado.nombre.lower() == 'entregada':
-            asignar_pago_wallet_conductor(orden)
+            asignar_pago_wallet(orden)
 
         return Response({'detail': f'Estado actualizado a {nuevo_estado.nombre}.'}, status=200)
 
@@ -249,18 +249,35 @@ class OrdenViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'No eres un conductor'}, status=403)
 
         # Estados que te interesa mostrar
-        estados_validos = ["asignada", "esperando aceptacion"]
 
         ordenes = Orden.objects.filter(
-            conductor=conductor,
-            estado__nombre__iexact="asignada"
-        ) | Orden.objects.filter(
-            conductor=conductor,
-            estado__nombre__iexact="esperando aceptacion"
-        )
+            conductor=conductor
+        ) 
 
         serializer = self.get_serializer(ordenes, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='mis-ordenes-restaurante')
+    def mis_ordenes_restaurante(self, request):
+        user = request.user
+
+        # ✅ Validar que sea un comercio
+        if user.rol.nombre.lower() != 'comercio':
+            return Response({'detail': 'No eres un comercio.'}, status=403)
+
+        # ✅ Obtener el restaurante asociado al usuario
+        restaurante = getattr(user, "restaurante", None)
+        if not restaurante:
+            from restaurantes.models import Restaurante
+            restaurante = Restaurante.objects.filter(usuario=user).first()
+
+        if not restaurante:
+            return Response({'detail': 'No tienes un restaurante asociado.'}, status=404)
+        # ✅ Filtrar las órdenes del restaurante
+        ordenes = Orden.objects.filter(restaurante=restaurante).order_by('-creado_en')
+
+        serializer = self.get_serializer(ordenes, many=True)
+        return Response(serializer.data, status=200)
     
     @action(detail=True, methods=['get'], url_path='ubicaciones')
     def ubicaciones(self, request, pk=None):

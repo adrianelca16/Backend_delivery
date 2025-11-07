@@ -21,7 +21,7 @@ class WalletViewSet(viewsets.ReadOnlyModelViewSet):
         user = request.user
 
         # Solo roles válidos pueden crear wallet
-        if user.rol.nombre not in ['conductor', 'comercio']:
+        if user.rol.nombre not in ['conductor', 'comercio', 'admin']:
             return Response({"error": "No tienes permisos para crear wallet."}, status=status.HTTP_403_FORBIDDEN)
 
         # Verificar si ya tiene wallet
