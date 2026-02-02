@@ -33,7 +33,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f'categoria "{nombre}" ya existe.'))
 
         metodos_pago = [
-            {"nombre": "Pago movil", "icono": "send-outline", "descripcion": "Pago movil"},
+            {"nombre": "Pago móvil", "icono": "send-outline", "descripcion": "Pago movil"},
             {"nombre": "Efectivo", "icono": "cash", "descripcion": "Efectivo"},
             {"nombre": "Bolívares", "icono": "wallet-outline", "descripcion": "Bolívares"},
         ]
